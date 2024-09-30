@@ -1,0 +1,15 @@
+
+
+
+AUTOML:
+  program: DNA_Vehicle
+  method: bayes
+  metric:
+    name: validation_loss
+    goal: minimize
+  parameters:
+    learning_rate:
+      min: 0.000001
+      max: 0.01
+    optimizer:
+      values: adam

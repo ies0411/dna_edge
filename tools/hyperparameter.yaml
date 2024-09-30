@@ -1,0 +1,15 @@
+project: DNA_vehicle
+architecture: DSVT_VOXEL
+dataset: base
+LR: 0.003
+WEIGHT_DECAY: 0.05
+MOMENTUM: 0.9
+NUM_EPOCHS: 24
+BATCH_SIZE_PER_GPU: 2
+dropout: 0.0
+normalize_pos: True
+VOXEL_SIZE: [ 0.32, 0.32, 0.1875]
+POINT_CLOUD_RANGE: [-74.88, -74.88, -2, 74.88, 74.88, 4]
+
+# SCORE_THRESH: 0.1
+# NMS_SCORE_THRESH: 0.1
