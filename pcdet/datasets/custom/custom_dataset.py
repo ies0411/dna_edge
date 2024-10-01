@@ -7,6 +7,7 @@ import numpy as np
 from ...ops.roiaware_pool3d import roiaware_pool3d_utils
 from ...utils import box_utils, common_utils
 from ..dataset import DatasetTemplate
+# from .eval_utils import get_custom_eval_result
 
 
 class CustomDataset(DatasetTemplate):
@@ -140,11 +141,13 @@ class CustomDataset(DatasetTemplate):
                 info_with_fakelidar=self.dataset_cfg.get("INFO_WITH_FAKELIDAR", False),
             )
             kitti_class_names = [map_name_to_kitti[x] for x in class_names]
+            # ap_result_str, ap_dict, ret = get_custom_eval_result(
             ap_result_str, ap_dict = kitti_eval.get_official_eval_result(
                 gt_annos=eval_gt_annos,
                 dt_annos=eval_det_annos,
                 current_classes=kitti_class_names,
             )
+
             return ap_result_str, ap_dict
 
         eval_det_annos = copy.deepcopy(det_annos)
@@ -339,6 +342,10 @@ if __name__ == "__main__":
             data_path=DATA_PATH,
             save_path=DATA_PATH,
         )
+
+# python -m pcdet.datasets.custom.custom_dataset create_custom_infos tools/cfgs/dataset_configs/custom_dataset.yaml /mnt/nas3/Data/dna_autonomous/vehicle_ego/custom
+# python -m pcdet.datasets.custom.custom_dataset create_custom_infos tools/cfgs/dataset_configs/custom_dataset.yaml /mnt/nas3/Data/dna_autonomous/edge_ego/custom
+
 
 # python -m pcdet.datasets.custom.custom_dataset create_custom_infos tools/cfgs/dataset_configs/custom_dataset.yaml /mnt/nas3/Data/dna_autonomous/vehicle_ego/custom
 # python -m pcdet.datasets.custom.custom_dataset create_custom_infos tools/cfgs/dataset_configs/custom_dataset.yaml /mnt/nas3/Data/dna_autonomous/edge_ego/custom

@@ -20,9 +20,11 @@ from pcdet.utils import common_utils
 from train_utils.optimization import build_optimizer, build_scheduler
 from train_utils.train_utils import train_model
 
-
+# CUDA_VISIBLE_DEVICES=2,3 ./scripts/dist_train.sh 2 --cfg_file cfgs/custom_models/pvrcnn_plus.yaml --work_dir /mnt/nas2/users/eslim/dna/pv_base/ --random_seed 777 --sync_bn --hyper hyperparameter_pv
 # python tools/train.py --cfg_file ./tools/cfgs/custom_models/dsvt.yaml --work_dir /mnt/nas2/users/eslim/dna/test --random_seed 777
 # sync_bn
+os.environ["WANDB_CONSOLE"] = "off"
+os.environ["WANDB_MODE"] = "dryrun"
 
 def parse_config():
     parser = argparse.ArgumentParser(description="arg parser")
@@ -89,6 +91,11 @@ def parse_config():
         help="max number of saved checkpoint",
     )
     parser.add_argument(
+        "--hyper",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
         "--merge_all_iters_to_one_epoch", action="store_true", default=False, help=""
     )
     parser.add_argument(
@@ -149,10 +156,10 @@ def load_yaml(file_path):
     return data
 
 
-def set_wandb():
+def set_wandb(args):
 
     hyper_param = load_yaml(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "hyperparameter.yaml")
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), f"{args.hyper}.yaml")
     )
     wandb.init(
         project=hyper_param["project"],
@@ -175,7 +182,7 @@ def set_wandb():
 
 def main():
     args, cfg = parse_config()
-    set_wandb()
+
 
     if args.launcher == "none":
         dist_train = False
@@ -188,7 +195,8 @@ def main():
             common_utils, "init_dist_%s" % args.launcher
         )(args.tcp_port, args.local_rank, backend="nccl")
         dist_train = True
-
+    if cfg.LOCAL_RANK ==0:
+        set_wandb(args)
     if args.batch_size is None:
         args.batch_size = cfg.OPTIMIZATION.BATCH_SIZE_PER_GPU
     else:

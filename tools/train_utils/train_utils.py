@@ -11,7 +11,10 @@ import wandb
 from eval_utils import eval_utils
 
 from pcdet.datasets import build_dataloader
+from pcdet.models import build_network
+
 import logging
+from pathlib import Path
 
 
 def train_one_epoch(
@@ -186,8 +189,8 @@ def train_one_epoch(
                 tb_log.add_scalar("meta_data/learning_rate", cur_lr, accumulated_iter)
                 for key, val in tb_dict.items():
                     tb_log.add_scalar("train/" + key, val, accumulated_iter)
-
-            wandb.log({"loss": loss, "learning_rate": cur_lr})
+            if rank == 0:
+                wandb.log({"loss": loss, "learning_rate": cur_lr})
             # save intermediate ckpt every {ckpt_save_time_interval} seconds
             time_past_this_epoch = pbar.format_dict["elapsed"]
             if time_past_this_epoch // ckpt_save_time_interval >= ckpt_save_cnt:
@@ -312,13 +315,14 @@ def train_model(
                     filename=ckpt_name,
                 )
 
-            evaluate_hook(
-                hook_config,
-                model=model,
-                cfg=cfg,
-                output_dir=str(ckpt_save_dir),
-                trained_epoch=cur_epoch,
-            )
+            if rank == 0:
+                evaluate_hook(
+                    hook_config,
+                    model=model,
+                    cfg=cfg,
+                    output_dir=str(ckpt_save_dir),
+                    trained_epoch=trained_epoch,
+                )
 
 
 def model_state_to_cpu(model_state):
@@ -397,9 +401,7 @@ def disable_augmentation_hook(
     return flag
 
 
-def evaluate_hook(
-    hook_config, model, cfg, output_dir, trained_epoch, dist_train=False, batch_size=1
-):
+def evaluate_hook(hook_config, model, cfg, output_dir, trained_epoch, batch_size=1):
     if hook_config is not None:
         EvalutationHook = hook_config.get("EvalutationHook", None)
         if EvalutationHook is not None:
@@ -407,15 +409,21 @@ def evaluate_hook(
             if trained_epoch % int(EvalutationHook.Interval) == 0:
 
                 logger = logging.getLogger("eval")
-
+                dist_test = False
                 test_set, test_loader, sampler = build_dataloader(
                     dataset_cfg=cfg.DATA_CONFIG,
                     class_names=cfg.CLASS_NAMES,
                     batch_size=batch_size,
-                    dist=dist_train,
+                    dist=dist_test,
                     workers=4,
                     logger=logger,
                     training=False,
+                )
+
+                model = build_network(
+                    model_cfg=cfg.MODEL,
+                    num_class=len(cfg.CLASS_NAMES),
+                    dataset=test_set,
                 )
                 model.load_params_from_file(
                     filename=os.path.join(
@@ -427,15 +435,32 @@ def evaluate_hook(
                 )
                 model.cuda()
 
-                # start evaluation
-                ret_dict = eval_utils.eval_one_epoch(
+                eval_dir = Path(output_dir).resolve()
+                eval_dir = eval_dir / "eval"
+                ret_dict, result_dict = eval_utils.eval_one_epoch(
                     cfg,
                     None,
                     model,
                     test_loader,
                     trained_epoch,
                     logger,
-                    # dist_test=False,
-                    # result_dir=eval_output_dir,
+                    result_dir=eval_dir,
+                    dist_test=dist_test,
                 )
-                wandb.log({"acc": ret_dict, "epoch": trained_epoch})
+
+                wandb.log(
+                    {
+                        "vehicle_AP": result_dict["Car_aos/easy_R40"],
+                        "ped_AP": result_dict["Pedestrian_aos/easy_R40"],
+                        "cyclist_AP": result_dict["Cyclist_aos/easy_R40"],
+                        "mAP": (
+                            (
+                                result_dict["Car_aos/easy_R40"]
+                                + result_dict["Pedestrian_aos/easy_R40"]
+                                + result_dict["Cyclist_aos/easy_R40"]
+                            )
+                            / 3.0
+                        ),
+                        "epoch": trained_epoch,
+                    }
+                )

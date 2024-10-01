@@ -1,11 +1,12 @@
-project: DNA_vehicle
+project: DNA_edge
+name: DSVT_base
 architecture: DSVT_VOXEL
 dataset: base
 LR: 0.003
 WEIGHT_DECAY: 0.05
 MOMENTUM: 0.9
-NUM_EPOCHS: 24
-BATCH_SIZE_PER_GPU: 2
+NUM_EPOCHS: 15
+BATCH_SIZE_PER_GPU: 4
 dropout: 0.0
 normalize_pos: True
 VOXEL_SIZE: [ 0.32, 0.32, 0.1875]
