@@ -10,3 +10,4 @@ wandb/
 .ipynb_checkpoints/
 dataset/
 output/
+work_dir/

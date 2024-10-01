@@ -6,6 +6,7 @@ import time
 import glob
 from torch.nn.utils import clip_grad_norm_
 from pcdet.utils import common_utils, commu_utils
+
 import wandb
 
 from eval_utils import eval_utils
@@ -189,8 +190,7 @@ def train_one_epoch(
                 tb_log.add_scalar("meta_data/learning_rate", cur_lr, accumulated_iter)
                 for key, val in tb_dict.items():
                     tb_log.add_scalar("train/" + key, val, accumulated_iter)
-            if rank == 0:
-                wandb.log({"loss": loss, "learning_rate": cur_lr})
+
             # save intermediate ckpt every {ckpt_save_time_interval} seconds
             time_past_this_epoch = pbar.format_dict["elapsed"]
             if time_past_this_epoch // ckpt_save_time_interval >= ckpt_save_cnt:
@@ -314,7 +314,6 @@ def train_model(
                     checkpoint_state(model, optimizer, trained_epoch, accumulated_iter),
                     filename=ckpt_name,
                 )
-
             if rank == 0:
                 evaluate_hook(
                     hook_config,
@@ -405,9 +404,7 @@ def evaluate_hook(hook_config, model, cfg, output_dir, trained_epoch, batch_size
     if hook_config is not None:
         EvalutationHook = hook_config.get("EvalutationHook", None)
         if EvalutationHook is not None:
-            # DISABLE_AUG_LIST = DisableAugmentationHook.DISABLE_AUG_LIST
             if trained_epoch % int(EvalutationHook.Interval) == 0:
-
                 logger = logging.getLogger("eval")
                 dist_test = False
                 test_set, test_loader, sampler = build_dataloader(
@@ -447,6 +444,7 @@ def evaluate_hook(hook_config, model, cfg, output_dir, trained_epoch, batch_size
                     result_dir=eval_dir,
                     dist_test=dist_test,
                 )
+                print(f"result_dict: {result_dict}")
 
                 wandb.log(
                     {

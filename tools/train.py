@@ -1,16 +1,13 @@
-import _init_path
 import argparse
 import datetime
 import glob
 import os
 from pathlib import Path
-from test import repeat_eval_ckpt
 
 import torch
 import torch.nn as nn
 import yaml
 
-# from tensorboardX import SummaryWriter
 import wandb
 
 from pcdet.config import cfg, cfg_from_list, cfg_from_yaml_file, log_config_to_file
@@ -20,11 +17,6 @@ from pcdet.utils import common_utils
 from train_utils.optimization import build_optimizer, build_scheduler
 from train_utils.train_utils import train_model
 
-# CUDA_VISIBLE_DEVICES=2,3 ./scripts/dist_train.sh 2 --cfg_file cfgs/custom_models/pvrcnn_plus.yaml --work_dir /mnt/nas2/users/eslim/dna/pv_base/ --random_seed 777 --sync_bn --hyper hyperparameter_pv
-# python tools/train.py --cfg_file ./tools/cfgs/custom_models/dsvt.yaml --work_dir /mnt/nas2/users/eslim/dna/test --random_seed 777
-# sync_bn
-os.environ["WANDB_CONSOLE"] = "off"
-os.environ["WANDB_MODE"] = "dryrun"
 
 def parse_config():
     parser = argparse.ArgumentParser(description="arg parser")
@@ -56,6 +48,12 @@ def parse_config():
         "--ckpt", type=str, default=None, help="checkpoint to start from"
     )
     parser.add_argument(
+        "--hyper",
+        type=str,
+        default=None,
+    )
+
+    parser.add_argument(
         "--pretrained_model", type=str, default=None, help="pretrained_model"
     )
     parser.add_argument(
@@ -66,20 +64,17 @@ def parse_config():
         "--launcher", choices=["none", "pytorch", "slurm"], default="none"
     )
     parser.add_argument(
-        "--local-rank", type=int, default=0, help="local rank for distributed training"
-    )
-    parser.add_argument(
         "--tcp_port", type=int, default=18888, help="tcp port for distrbuted training"
     )
     parser.add_argument(
         "--sync_bn", action="store_true", default=False, help="whether to use sync bn"
     )
-    parser.add_argument("--random_seed", type=int)
+    parser.add_argument("--random_seed", default=777, type=int)
     parser.add_argument(
         "--ckpt_save_interval", type=int, default=1, help="number of training epochs"
     )
     parser.add_argument(
-        "--local_rank",
+        "--local-rank",
         type=int,
         default=None,
         help="local rank for distributed training",
@@ -89,11 +84,6 @@ def parse_config():
         type=int,
         default=30,
         help="max number of saved checkpoint",
-    )
-    parser.add_argument(
-        "--hyper",
-        type=str,
-        default=None,
     )
     parser.add_argument(
         "--merge_all_iters_to_one_epoch", action="store_true", default=False, help=""
@@ -163,6 +153,7 @@ def set_wandb(args):
     )
     wandb.init(
         project=hyper_param["project"],
+        name=hyper_param["name"],
         config={
             "LR": hyper_param["LR"],
             "WEIGHT_DECAY": hyper_param["WEIGHT_DECAY"],
@@ -183,7 +174,6 @@ def set_wandb(args):
 def main():
     args, cfg = parse_config()
 
-
     if args.launcher == "none":
         dist_train = False
         total_gpus = 1
@@ -195,7 +185,7 @@ def main():
             common_utils, "init_dist_%s" % args.launcher
         )(args.tcp_port, args.local_rank, backend="nccl")
         dist_train = True
-    if cfg.LOCAL_RANK ==0:
+    if cfg.LOCAL_RANK == 0:
         set_wandb(args)
     if args.batch_size is None:
         args.batch_size = cfg.OPTIMIZATION.BATCH_SIZE_PER_GPU
@@ -242,12 +232,6 @@ def main():
     if cfg.LOCAL_RANK == 0:
         os.system("cp %s %s" % (args.cfg_file, output_dir))
 
-    # tb_log = (
-    #     SummaryWriter(log_dir=str(output_dir / "tensorboard"))
-    #     if cfg.LOCAL_RANK == 0
-    #     else None
-    # )
-
     logger.info("----------- Create dataloader & network & optimizer -----------")
     train_set, train_loader, train_sampler = build_dataloader(
         dataset_cfg=cfg.DATA_CONFIG,
@@ -260,7 +244,6 @@ def main():
         merge_all_iters_to_one_epoch=args.merge_all_iters_to_one_epoch,
         total_epochs=args.epochs,
         seed=args.random_seed,
-        # 666 if args.random_seed else None,
     )
 
     model = build_network(
@@ -362,40 +345,6 @@ def main():
         % (cfg.EXP_GROUP_PATH, cfg.TAG, args.extra_tag)
     )
     wandb.finish()
-    # TODO : interval val
-    # logger.info(
-    #     "**********************Start evaluation %s/%s(%s)**********************"
-    #     % (cfg.EXP_GROUP_PATH, cfg.TAG, args.extra_tag)
-    # )
-    # test_set, test_loader, sampler = build_dataloader(
-    #     dataset_cfg=cfg.DATA_CONFIG,
-    #     class_names=cfg.CLASS_NAMES,
-    #     batch_size=args.batch_size,
-    #     dist=dist_train,
-    #     workers=args.workers,
-    #     logger=logger,
-    #     training=False,
-    # )
-    # eval_output_dir = Path(args.work_dir).resolve()
-    # eval_output_dir = eval_output_dir / "eval" / "eval_with_train"
-    # eval_output_dir.mkdir(parents=True, exist_ok=True)
-    # args.start_epoch = max(
-    #     args.epochs - args.num_epochs_to_eval, 0
-    # )  # Only evaluate the last args.num_epochs_to_eval epochs
-
-    # repeat_eval_ckpt(
-    #     model.module if dist_train else model,
-    #     test_loader,
-    #     args,
-    #     eval_output_dir,
-    #     logger,
-    #     ckpt_dir,
-    #     dist_test=dist_train,
-    # )
-    # logger.info(
-    #     "**********************End evaluation %s/%s(%s)**********************"
-    #     % (cfg.EXP_GROUP_PATH, cfg.TAG, args.extra_tag)
-    # )
 
 
 if __name__ == "__main__":

@@ -3,7 +3,6 @@ CLASS_NAMES: ['Vehicle', 'Pedestrian', 'Cyclist']
 DATA_CONFIG:
     DATASET: 'CustomDataset'
     DATA_PATH: "/home/ubuntu/eslim/dna/dataset/custom"
-    # "/mnt/nas3/Data/dna_autonomous/vehicle_ego/custom"
 
     POINT_CLOUD_RANGE: [-74.88, -74.88, -2, 74.88, 74.88, 4]
 
