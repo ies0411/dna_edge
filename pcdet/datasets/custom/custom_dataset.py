@@ -104,23 +104,113 @@ class CustomDataset(DatasetTemplate):
 
         return len(self.custom_infos)
 
+
     def __getitem__(self, index):
-        if self._merge_all_iters_to_one_epoch:
-            index = index % len(self.custom_infos)
+        # if self._merge_all_iters_to_one_epoch:
+        #     index = index % len(self.custom_infos)
 
-        info = copy.deepcopy(self.custom_infos[index])
-        sample_idx = info["point_cloud"]["lidar_idx"]
-        points = self.get_lidar(sample_idx)
-        input_dict = {"frame_id": self.sample_id_list[index], "points": points}
+        # info = copy.deepcopy(self.custom_infos[index])
+        # sample_idx = info["point_cloud"]["lidar_idx"]
+        # points = self.get_lidar(sample_idx)
+        # input_dict = {"frame_id": self.sample_id_list[index], "points": points}
 
-        if "annos" in info:
-            annos = info["annos"]
-            annos = common_utils.drop_info_with_name(annos, name="DontCare")
-            gt_names = annos["name"]
-            gt_boxes_lidar = annos["gt_boxes_lidar"]
-            input_dict.update({"gt_names": gt_names, "gt_boxes": gt_boxes_lidar})
+        # if "annos" in info:
+        #     annos = info["annos"]
+        #     annos = common_utils.drop_info_with_name(annos, name="DontCare")
+        #     gt_names = annos["name"]
+        #     gt_boxes_lidar = annos["gt_boxes_lidar"]
+        #     input_dict.update({"gt_names": gt_names, "gt_boxes": gt_boxes_lidar})
 
-        data_dict = self.prepare_data(data_dict=input_dict)
+        # data_dict = self.prepare_data(data_dict=input_dict)
+
+        # return data_dict
+        if len(self.dataset_cfg.DATA_AUGMENTOR.MIX.NAME_LIST) == 0 or np.random.random(
+            1
+        ) > self.dataset_cfg.DATA_AUGMENTOR.MIX.get("PROB", 0):
+            info = copy.deepcopy(self.custom_infos[index])
+            sample_idx = info["point_cloud"]["lidar_idx"]
+            points = self.get_lidar(sample_idx)
+            input_dict = {
+                "frame_id": self.sample_id_list[index],
+                "points": points,
+            }
+
+            if "annos" in info:
+                # TODO : mapping cls to kitti
+                annos = info["annos"]
+                annos = common_utils.drop_info_with_name(annos, name="DontCare")
+                # for k in range(annos["name"].shape[0]):
+                #     annos["name"][k] = (
+                #         self.dataset_cfg.MAP_NIA_TO_CLASS[annos["name"][k]]
+                #         if annos["name"][k] in self.dataset_cfg.MAP_NIA_TO_CLASS.keys()
+                #         else annos["name"][k]
+                #     )
+                gt_names = annos["name"]
+                gt_boxes_lidar = annos["gt_boxes_lidar"]
+                input_dict.update({"gt_names": gt_names, "gt_boxes": gt_boxes_lidar})
+            data_dict = self.prepare_data(data_dict=input_dict)
+
+        else:
+            idx2 = np.random.randint(len(self.custom_infos))
+            info_1 = copy.deepcopy(self.custom_infos[index])
+            info_2 = copy.deepcopy(self.custom_infos[idx2])
+
+            # sample_idx = info['point_cloud']['lidar_idx']
+            points_1 = self.get_lidar(info_1["point_cloud"]["lidar_idx"])
+            points_2 = self.get_lidar(info_2["point_cloud"]["lidar_idx"])
+
+            input_dict_1 = {
+                "frame_id": self.sample_id_list[index],
+                "points": points_1,
+            }
+            input_dict_2 = {
+                "frame_id": self.sample_id_list[idx2],
+                "points": points_2,
+            }
+
+            if "annos" in info_1:
+                # TODO : mapping cls to kitti
+                annos = info_1["annos"]
+                annos = common_utils.drop_info_with_name(annos, name="DontCare")
+                # for k in range(annos["name"].shape[0]):
+                #     annos["name"][k] = (
+                #         self.dataset_cfg.MAP_NIA_TO_CLASS[annos["name"][k]]
+                #         if annos["name"][k] in self.dataset_cfg.MAP_NIA_TO_CLASS.keys()
+                #         else annos["name"][k]
+                #     )
+                gt_names = annos["name"]
+                gt_boxes_lidar = annos["gt_boxes_lidar"]
+                input_dict_1.update({"gt_names": gt_names, "gt_boxes": gt_boxes_lidar})
+
+            if "annos" in info_2:
+                # TODO : mapping cls to kitti
+                annos = info_2["annos"]
+                annos = common_utils.drop_info_with_name(annos, name="DontCare")
+                # for k in range(annos["name"].shape[0]):
+                #     annos["name"][k] = (
+                #         self.dataset_cfg.MAP_NIA_TO_CLASS[annos["name"][k]]
+                #         if annos["name"][k] in self.dataset_cfg.MAP_NIA_TO_CLASS.keys()
+                #         else annos["name"][k]
+                #     )
+                gt_names = annos["name"]
+                gt_boxes_lidar = annos["gt_boxes_lidar"]
+                input_dict_2.update({"gt_names": gt_names, "gt_boxes": gt_boxes_lidar})
+
+            if len(self.dataset_cfg.DATA_AUGMENTOR.MIX.NAME_LIST) == 1:
+                if self.dataset_cfg.DATA_AUGMENTOR.MIX.NAME_LIST[0] == "mix_up":
+                    data_dict = self.prepare_mixup_data(input_dict_1, input_dict_2)
+
+                if self.dataset_cfg.DATA_AUGMENTOR.MIX.NAME_LIST[0] == "cut_mix":
+                    data_dict = self.prepare_cutmix_data(input_dict_1, input_dict_2)
+            else:
+                index = np.random.randint(
+                    len(self.dataset_cfg.DATA_AUGMENTOR.MIX.NAME_LIST)
+                )
+                if self.dataset_cfg.DATA_AUGMENTOR.MIX.NAME_LIST[index] == "mix_up":
+                    data_dict = self.prepare_mixup_data(input_dict_1, input_dict_2)
+
+                if self.dataset_cfg.DATA_AUGMENTOR.MIX.NAME_LIST[index] == "cut_mix":
+                    data_dict = self.prepare_cutmix_data(input_dict_1, input_dict_2)
 
         return data_dict
 

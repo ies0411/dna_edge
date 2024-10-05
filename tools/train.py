@@ -158,14 +158,17 @@ def set_wandb(args):
             "LR": hyper_param["LR"],
             "WEIGHT_DECAY": hyper_param["WEIGHT_DECAY"],
             "MOMENTUM": hyper_param["MOMENTUM"],
-            "dropout": hyper_param["dropout"],
+
             "BATCH_SIZE_PER_GPU": hyper_param["BATCH_SIZE_PER_GPU"],
-            "normalize_pos": hyper_param["normalize_pos"],
+
             "VOXEL_SIZE": hyper_param["VOXEL_SIZE"],
             "NUM_EPOCHS": hyper_param["NUM_EPOCHS"],
             "architecture": hyper_param["architecture"],
             "dataset": hyper_param["dataset"],
             "POINT_CLOUD_RANGE": hyper_param["POINT_CLOUD_RANGE"],
+            "WARMUP": hyper_param["WARMUP"],
+            # "normalize_pos": hyper_param["normalize_pos"],
+            # "dropout": hyper_param["dropout"],
         },
     )
     return wandb.config

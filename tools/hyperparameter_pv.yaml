@@ -1,0 +1,16 @@
+project: DNA_vehicle
+architecture: PVRCNN_PLUS
+name: PVRCNN_base
+dataset: base
+LR: 0.001
+WEIGHT_DECAY: 0.001
+MOMENTUM: 0.9
+NUM_EPOCHS: 45
+BATCH_SIZE_PER_GPU: 4
+# dropout: 0.0
+# normalize_pos: True
+VOXEL_SIZE: [0.1, 0.1, 0.15]
+POINT_CLOUD_RANGE: [-75.2, -75.2, -2, 75.2, 75.2, 4]
+WARMUP: 0
+# SCORE_THRESH: 0.1
+# NMS_SCORE_THRESH: 0.1

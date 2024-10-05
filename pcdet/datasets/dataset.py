@@ -9,6 +9,11 @@ from ..utils import common_utils
 from .augmentor.data_augmentor import DataAugmentor
 from .processor.data_processor import DataProcessor
 from .processor.point_feature_encoder import PointFeatureEncoder
+from .processor.inter_domain_point_cutmix import inter_domain_point_cutmix
+from .processor.intra_domain_point_mixup import (
+    intra_domain_point_mixup,
+    intra_domain_point_mixup_cd,
+)
 
 
 class DatasetTemplate(torch_data.Dataset):
@@ -45,7 +50,7 @@ class DatasetTemplate(torch_data.Dataset):
             self.depth_downsample_factor = self.data_processor.depth_downsample_factor
         else:
             self.depth_downsample_factor = None
-            
+
     @property
     def mode(self):
         return 'train' if self.training else 'test'
@@ -73,7 +78,7 @@ class DatasetTemplate(torch_data.Dataset):
         Returns:
 
         """
-        
+
         def get_template_prediction(num_samples):
             box_dim = 9 if self.dataset_cfg.get('TRAIN_WITH_SPEED', False) else 7
             ret_dict = {
@@ -179,7 +184,7 @@ class DatasetTemplate(torch_data.Dataset):
         if self.training:
             assert 'gt_boxes' in data_dict, 'gt_boxes should be provided for training'
             gt_boxes_mask = np.array([n in self.class_names for n in data_dict['gt_names']], dtype=np.bool_)
-            
+
             if 'calib' in data_dict:
                 calib = data_dict['calib']
             data_dict = self.data_augmentor.forward(
@@ -216,6 +221,201 @@ class DatasetTemplate(torch_data.Dataset):
         data_dict.pop('gt_names', None)
 
         return data_dict
+
+
+
+    def prepare_mixup_data(self, data_dict_1, data_dict_2):
+        if self.training:
+            assert "gt_boxes" in data_dict_1
+            assert "gt_boxes" in data_dict_2
+            gt_boxes_mask_1 = np.array(
+                [n in self.class_names for n in data_dict_1["gt_names"]], dtype=np.bool_
+            )
+            gt_boxes_mask_2 = np.array(
+                [n in self.class_names for n in data_dict_2["gt_names"]], dtype=np.bool_
+            )
+            if "calib" in data_dict_1:
+                calib_1 = data_dict_1["calib"]
+            if "calib" in data_dict_2:
+                calib_2 = data_dict_2["calib"]
+
+        if data_dict_1.get("gt_boxes", None) is not None:
+            selected = common_utils.keep_arrays_by_name(
+                data_dict_1["gt_names"], self.class_names
+            )
+
+            data_dict_1["gt_boxes"] = data_dict_1["gt_boxes"][selected]
+            data_dict_1["gt_names"] = data_dict_1["gt_names"][selected]
+
+            gt_classes = np.array(
+                [self.class_names.index(n) + 1 for n in data_dict_1["gt_names"]],
+                dtype=np.int32,
+            )
+            gt_boxes = np.concatenate(
+                (data_dict_1["gt_boxes"], gt_classes.reshape(-1, 1).astype(np.float32)),
+                axis=1,
+            )
+
+            data_dict_1["gt_boxes"] = gt_boxes
+
+            if data_dict_1.get("gt_boxes2d", None) is not None:
+                data_dict_1["gt_boxes2d"] = data_dict_1["gt_boxes2d"][selected]
+
+        if data_dict_2.get("gt_boxes", None) is not None:
+            selected = common_utils.keep_arrays_by_name(
+                data_dict_2["gt_names"], self.class_names
+            )
+            data_dict_2["gt_boxes"] = data_dict_2["gt_boxes"][selected]
+            data_dict_2["gt_names"] = data_dict_2["gt_names"][selected]
+
+            gt_classes = np.array(
+                [self.class_names.index(n) + 1 for n in data_dict_2["gt_names"]],
+                dtype=np.int32,
+            )
+            gt_boxes = np.concatenate(
+                (data_dict_2["gt_boxes"], gt_classes.reshape(-1, 1).astype(np.float32)),
+                axis=1,
+            )
+
+            data_dict_2["gt_boxes"] = gt_boxes
+
+            if data_dict_2.get("gt_boxes2d", None) is not None:
+                data_dict_2["gt_boxes2d"] = data_dict_2["gt_boxes2d"][selected]
+
+        if data_dict_1.get("points", None) is not None:
+            data_dict_1 = self.point_feature_encoder.forward(data_dict_1)
+
+        if data_dict_2.get("points", None) is not None:
+            data_dict_2 = self.point_feature_encoder.forward(data_dict_2)
+
+        if self.dataset_cfg.DATA_AUGMENTOR.get("COLLISION_DETECTION", True):
+            data_dict = intra_domain_point_mixup_cd(
+                data_dict_1,
+                data_dict_2,
+                alpha=self.dataset_cfg.DATA_AUGMENTOR.MIX.ALPHA,
+            )
+        else:
+            data_dict = intra_domain_point_mixup(
+                data_dict_1,
+                data_dict_2,
+                alpha=self.dataset_cfg.DATA_AUGMENTOR.MIX.ALPHA,
+            )
+
+        if len(data_dict["gt_boxes"].shape) != 2:
+            new_index = np.random.randint(self.__len__())
+            return self.__getitem__(new_index)
+
+        data_dict = self.data_processor.forward(data_dict=data_dict)
+
+        if self.training and len(data_dict["gt_boxes"]) == 0:
+            new_index = np.random.randint(self.__len__())
+            return self.__getitem__(new_index)
+
+        data_dict.pop("gt_names", None)
+
+        return data_dict
+
+    def prepare_cutmix_data(self, data_dict_source, data_dict_target):
+        if self.training:
+            assert (
+                "gt_boxes" in data_dict_source
+            ), "gt_boxes should be provided for training in data_dict_source!"
+            assert (
+                "gt_boxes" in data_dict_target
+            ), "gt_boxes should be proviced for training in data_dict_target!"
+
+            gt_boxes_mask_source = np.array(
+                [n in self.class_names for n in data_dict_source["gt_names"]],
+                dtype=np.bool_,
+            )
+            gt_boxes_mask_target = np.array(
+                [n in self.class_names for n in data_dict_target["gt_names"]],
+                dtype=np.bool_,
+            )
+
+        if data_dict_source.get("gt_boxes", None) is not None:
+            selected = common_utils.keep_arrays_by_name(
+                data_dict_source["gt_names"], self.class_names
+            )
+            data_dict_source["gt_boxes"] = data_dict_source["gt_boxes"][selected]
+            data_dict_source["gt_names"] = data_dict_source["gt_names"][selected]
+            gt_classes = np.array(
+                [self.class_names.index(n) + 1 for n in data_dict_source["gt_names"]],
+                dtype=np.int32,
+            )
+
+            for idx, name in enumerate(data_dict_source["gt_names"]):
+                if name == self.class_names[0]:
+                    data_dict_source["gt_names"][idx] = self.class_names[0]
+
+            gt_boxes = np.concatenate(
+                (
+                    data_dict_source["gt_boxes"],
+                    gt_classes.reshape(-1, 1).astype(np.float32),
+                ),
+                axis=1,
+            )
+            data_dict_source["gt_boxes"] = gt_boxes
+
+            if data_dict_source.get("gt_boxes2d", None) is not None:
+                data_dict_source["gt_boxes2d"] = data_dict_source["gt_boxes2d"][
+                    selected
+                ]
+
+        if data_dict_target.get("gt_boxes", None) is not None:
+            selected = common_utils.keep_arrays_by_name(
+                data_dict_target["gt_names"], self.class_names
+            )
+            data_dict_target["gt_boxes"] = data_dict_target["gt_boxes"][selected]
+            data_dict_target["gt_names"] = data_dict_target["gt_names"][selected]
+            gt_classes = np.array(
+                [self.class_names.index(n) + 1 for n in data_dict_target["gt_names"]],
+                dtype=np.int32,
+            )
+
+            for idx, name in enumerate(data_dict_target["gt_names"]):
+                if name == self.class_names[0]:
+                    data_dict_target["gt_names"][idx] = self.class_names[0]
+
+            gt_boxes = np.concatenate(
+                (
+                    data_dict_target["gt_boxes"],
+                    gt_classes.reshape(-1, 1).astype(np.float32),
+                ),
+                axis=1,
+            )
+            data_dict_target["gt_boxes"] = gt_boxes
+
+            if data_dict_target.get("gt_boxes2d", None) is not None:
+                data_dict_target["gt_boxes2d"] = data_dict_target["gt_boxes2d"][
+                    selected
+                ]
+
+        if data_dict_source.get("points", None) is not None:
+            data_dict_source = self.point_feature_encoder.forward(data_dict_source)
+
+        if data_dict_target.get("points", None) is not None:
+            data_dict_target = self.point_feature_encoder.forward(data_dict_target)
+
+        assert data_dict_source is not None and data_dict_target is not None
+
+        cutmixed_data_dict = inter_domain_point_cutmix(
+            data_dict_source, data_dict_target, self.point_cloud_range
+        )
+
+        if len(cutmixed_data_dict["gt_boxes"].shape) != 2:
+            new_index = np.random.randint(self.__len__())
+            return self.__getitem__(new_index)
+
+        cutmixed_data_dict = self.data_processor.forward(cutmixed_data_dict)
+
+        if self.training and len(cutmixed_data_dict["gt_boxes"]) == 0:
+            new_index = np.random.randint(self.__len__())
+            return self.__getitem__(new_index)
+
+        cutmixed_data_dict.pop("gt_names", None)
+
+        return cutmixed_data_dict
 
     @staticmethod
     def collate_batch(batch_list, _unused=False):
