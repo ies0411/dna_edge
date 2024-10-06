@@ -1,8 +1,8 @@
 project: DNA_edge
-architecture: PVRCNN_PLUS
-name: PVRCNN_base
+architecture: PVRCNN_PLUS_RES
+name: PVRCNN_base_res
 dataset: base
-LR: 0.001
+LR: 0.005
 WEIGHT_DECAY: 0.001
 MOMENTUM: 0.9
 NUM_EPOCHS: 45

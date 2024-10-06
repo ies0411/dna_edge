@@ -96,13 +96,13 @@ MODEL:
         NUM_BEV_FEATURES: 256
 
     BACKBONE_2D:
-        NAME: BaseBEVBackbone
+        NAME: BaseBEVResBackbone
 
         LAYER_NUMS: [5, 5]
         LAYER_STRIDES: [1, 2]
-        NUM_FILTERS: [128, 256]
+        NUM_FILTERS: [128, 512]
         UPSAMPLE_STRIDES: [1, 2]
-        NUM_UPSAMPLE_FILTERS: [256, 256]
+        NUM_UPSAMPLE_FILTERS: [256, 512]
 
     DENSE_HEAD:
         NAME: AnchorHeadSingle
@@ -119,7 +119,7 @@ MODEL:
                 'anchor_sizes': [[4.5, 1.6, 1.56]],
                 'anchor_rotations': [0, 1.57],
                 'anchor_bottom_heights': [0.2],
-                'align_center': False,
+                'align_center': True,
                 'feature_map_stride': 8,
                 'matched_threshold': 0.6,
                 'unmatched_threshold': 0.45
@@ -129,7 +129,7 @@ MODEL:
                 'anchor_sizes': [[0.8, 0.6, 1.73]],
                 'anchor_rotations': [0, 1.57],
                 'anchor_bottom_heights': [-0.6],
-                'align_center': False,
+                'align_center': True,
                 'feature_map_stride': 8,
                 'matched_threshold': 0.5,
                 'unmatched_threshold': 0.35
@@ -139,7 +139,7 @@ MODEL:
                 'anchor_sizes': [[1.76, 0.6, 1.73]],
                 'anchor_rotations': [0, 1.57],
                 'anchor_bottom_heights': [-0.6],
-                'align_center': False,
+                'align_center': True,
                 'feature_map_stride': 8,
                 'matched_threshold': 0.5,
                 'unmatched_threshold': 0.35
@@ -165,7 +165,7 @@ MODEL:
     PFE:
         NAME: VoxelSetAbstraction
         POINT_SOURCE: raw_points
-        NUM_KEYPOINTS: 2048
+        NUM_KEYPOINTS: 4096
         NUM_OUTPUT_FEATURES: 90
         SAMPLE_METHOD: SPC
         SPC_SAMPLING:
@@ -181,7 +181,7 @@ MODEL:
                 NUM_REDUCED_CHANNELS: 1
                 NUM_CHANNELS_OF_LOCAL_AGGREGATION: 32
                 MSG_POST_MLPS: [ 32 ]
-                FILTER_NEIGHBOR_WITH_ROI: True
+                FILTER_NEIGHBOR_WITH_ROI: False
                 RADIUS_OF_NEIGHBOR_WITH_ROI: 2.4
 
                 GROUP_CFG_0:
@@ -205,7 +205,7 @@ MODEL:
                 NUM_REDUCED_CHANNELS: 32
                 NUM_CHANNELS_OF_LOCAL_AGGREGATION: 32
                 MSG_POST_MLPS: [128]
-                FILTER_NEIGHBOR_WITH_ROI: True
+                FILTER_NEIGHBOR_WITH_ROI: False
                 RADIUS_OF_NEIGHBOR_WITH_ROI: 4.0
 
                 GROUP_CFG_0:
@@ -229,7 +229,7 @@ MODEL:
                 NUM_REDUCED_CHANNELS: 32
                 NUM_CHANNELS_OF_LOCAL_AGGREGATION: 32
                 MSG_POST_MLPS: [ 128 ]
-                FILTER_NEIGHBOR_WITH_ROI: True
+                FILTER_NEIGHBOR_WITH_ROI: False
                 RADIUS_OF_NEIGHBOR_WITH_ROI: 6.4
 
                 GROUP_CFG_0:
@@ -350,7 +350,7 @@ OPTIMIZATION:
     NUM_EPOCHS: 45
 
     OPTIMIZER: adam_onecycle
-    LR: 0.001
+    LR: 0.005
     WEIGHT_DECAY: 0.001
     MOMENTUM: 0.9
 
@@ -371,7 +371,7 @@ OPTIMIZATION:
 HOOK:
     DisableAugmentationHook:
         DISABLE_AUG_LIST: ['gt_sampling','random_world_flip','random_world_rotation','random_world_scaling', 'random_world_translation']
-        NUM_LAST_EPOCHS: 1
+        NUM_LAST_EPOCHS: 3
 
     EvalutationHook:
         Interval: 5

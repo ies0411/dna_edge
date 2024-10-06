@@ -1,0 +1,17 @@
+project: DNA_edge
+name: DSVT_anchor_base
+architecture: DSVT_anchor_base
+dataset: base
+LR: 0.003
+WEIGHT_DECAY: 0.05
+MOMENTUM: 0.9
+NUM_EPOCHS: 30
+BATCH_SIZE_PER_GPU: 4
+dropout: 0.0
+normalize_pos: True
+VOXEL_SIZE: [ 0.32, 0.32, 0.1875]
+POINT_CLOUD_RANGE: [-74.88, -74.88, -2, 74.88, 74.88, 4]
+WARMUP: 0
+
+# SCORE_THRESH: 0.1
+# NMS_SCORE_THRESH: 0.1
