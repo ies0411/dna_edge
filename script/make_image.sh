@@ -14,7 +14,7 @@ SOURCE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 DOCKER_DIR=${SOURCE_DIR}/docker
 
 #Get version from autolabel3d/__init__.py
-IMAGE_NAME=dna
+IMAGE_NAME=dna_edge
 
 
 
