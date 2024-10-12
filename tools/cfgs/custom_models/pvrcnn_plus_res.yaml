@@ -5,7 +5,7 @@ CLASS_NAMES: ['Vehicle', 'Pedestrian', 'Cyclist']
 
 DATA_CONFIG:
     DATASET: 'CustomDataset'
-    DATA_PATH: "/home/ubuntu/eslim/dna/dataset/custom"
+    DATA_PATH: "/home/ies0411/dna_edge/datasets/custom"
 
     POINT_CLOUD_RANGE: [-75.2, -75.2, -2, 75.2, 75.2, 4]
 
@@ -30,8 +30,8 @@ DATA_CONFIG:
         used_feature_list: ['x', 'y', 'z', 'intensity'],
         src_feature_list: ['x', 'y', 'z', 'intensity'],
     }
-    BALANCED_RESAMPLING: True
-    USE_SHARED_MEMORY: False
+    # BALANCED_RESAMPLING: True
+    # USE_SHARED_MEMORY: False
     DATA_AUGMENTOR:
         DISABLE_AUG_LIST: ['placeholder']
         MIX:
@@ -76,7 +76,7 @@ DATA_CONFIG:
 
         - NAME: transform_points_to_voxels
           VOXEL_SIZE: [0.1, 0.1, 0.15]
-          MAX_POINTS_PER_VOXEL: 5
+          MAX_POINTS_PER_VOXEL: 15
           MAX_NUMBER_OF_VOXELS: {
             'train': 150000,
             'test': 150000
@@ -181,7 +181,7 @@ MODEL:
                 NUM_REDUCED_CHANNELS: 1
                 NUM_CHANNELS_OF_LOCAL_AGGREGATION: 32
                 MSG_POST_MLPS: [ 32 ]
-                FILTER_NEIGHBOR_WITH_ROI: False
+                FILTER_NEIGHBOR_WITH_ROI: True
                 RADIUS_OF_NEIGHBOR_WITH_ROI: 2.4
 
                 GROUP_CFG_0:
@@ -205,7 +205,7 @@ MODEL:
                 NUM_REDUCED_CHANNELS: 32
                 NUM_CHANNELS_OF_LOCAL_AGGREGATION: 32
                 MSG_POST_MLPS: [128]
-                FILTER_NEIGHBOR_WITH_ROI: False
+                FILTER_NEIGHBOR_WITH_ROI: True
                 RADIUS_OF_NEIGHBOR_WITH_ROI: 4.0
 
                 GROUP_CFG_0:
@@ -229,7 +229,7 @@ MODEL:
                 NUM_REDUCED_CHANNELS: 32
                 NUM_CHANNELS_OF_LOCAL_AGGREGATION: 32
                 MSG_POST_MLPS: [ 128 ]
-                FILTER_NEIGHBOR_WITH_ROI: False
+                FILTER_NEIGHBOR_WITH_ROI: True
                 RADIUS_OF_NEIGHBOR_WITH_ROI: 6.4
 
                 GROUP_CFG_0:
