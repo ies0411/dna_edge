@@ -1,6 +1,6 @@
 project: DNA_edge
-name: DSVT_base2
-architecture: DSVT_VOXEL2
+name: DSVT_base
+architecture: DSVT_VOXEL
 dataset: base
 LR: 0.001
 WEIGHT_DECAY: 0.05
