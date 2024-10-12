@@ -39,6 +39,11 @@ def parse_config():
         help="number of epochs to train for",
     )
     parser.add_argument(
+        "--wandb",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
         "--workers", type=int, default=4, help="number of workers for dataloader"
     )
     parser.add_argument(
@@ -147,7 +152,6 @@ def load_yaml(file_path):
 
 
 def set_wandb(args):
-
     hyper_param = load_yaml(
         os.path.join(os.path.dirname(os.path.abspath(__file__)), f"{args.hyper}.yaml")
     )
@@ -176,7 +180,6 @@ def set_wandb(args):
 
 def main():
     args, cfg = parse_config()
-
     if args.launcher == "none":
         dist_train = False
         total_gpus = 1
@@ -188,7 +191,7 @@ def main():
             common_utils, "init_dist_%s" % args.launcher
         )(args.tcp_port, args.local_rank, backend="nccl")
         dist_train = True
-    if cfg.LOCAL_RANK == 0:
+    if cfg.LOCAL_RANK == 0 and args.wandb:
         set_wandb(args)
     if args.batch_size is None:
         args.batch_size = cfg.OPTIMIZATION.BATCH_SIZE_PER_GPU
@@ -324,7 +327,7 @@ def main():
         total_epochs=args.epochs,
         start_iter=it,
         rank=cfg.LOCAL_RANK,
-        tb_log=None,
+        tb_log=args.wandb,
         ckpt_save_dir=ckpt_dir,
         train_sampler=train_sampler,
         lr_warmup_scheduler=lr_warmup_scheduler,

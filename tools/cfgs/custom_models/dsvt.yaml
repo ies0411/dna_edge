@@ -3,7 +3,7 @@ CLASS_NAMES: ['Vehicle', 'Pedestrian', 'Cyclist']
 
 DATA_CONFIG:
     DATASET: 'CustomDataset'
-    DATA_PATH: "/home/eslim/dna_edge/datasets/custom"
+    DATA_PATH: "/home/ies0411/dna_edge/datasets/custom"
 
     POINT_CLOUD_RANGE: [-74.88, -74.88, -2, 74.88, 74.88, 4]
 

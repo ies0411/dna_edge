@@ -1,6 +1,6 @@
 DATASET: 'CustomDataset'
 # DATA_PATH: '../data/custom'
-DATA_PATH: "/home/ubuntu/eslim/dna/dataset/custom"
+DATA_PATH: "/home/ies0411/dna_edge/datasets/custom"
 # DATA_PATH: "/mnt/nas3/Data/dna_autonomous/dna_autonomous/vehicle_ego/custom"
 
 POINT_CLOUD_RANGE: [-75.2, -75.2, -2, 75.2, 75.2, 4]

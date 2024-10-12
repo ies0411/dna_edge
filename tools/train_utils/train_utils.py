@@ -83,8 +83,8 @@ def train_one_epoch(
         except:
             cur_lr = optimizer.param_groups[0]["lr"]
 
-        if tb_log is not None:
-            tb_log.add_scalar("meta_data/learning_rate", cur_lr, accumulated_iter)
+        # if tb_log is not None:
+            # tb_log.add_scalar("meta_data/learning_rate", cur_lr, accumulated_iter)
 
         model.train()
         optimizer.zero_grad()
@@ -185,11 +185,11 @@ def train_one_epoch(
                 tbar.set_postfix(disp_dict)
                 # tbar.refresh()
 
-            if tb_log is not None:
-                tb_log.add_scalar("train/loss", loss, accumulated_iter)
-                tb_log.add_scalar("meta_data/learning_rate", cur_lr, accumulated_iter)
-                for key, val in tb_dict.items():
-                    tb_log.add_scalar("train/" + key, val, accumulated_iter)
+            # if tb_log is not None:
+            #     tb_log.add_scalar("train/loss", loss, accumulated_iter)
+            #     tb_log.add_scalar("meta_data/learning_rate", cur_lr, accumulated_iter)
+            #     for key, val in tb_dict.items():
+            #         tb_log.add_scalar("train/" + key, val, accumulated_iter)
 
             # save intermediate ckpt every {ckpt_save_time_interval} seconds
             time_past_this_epoch = pbar.format_dict["elapsed"]
@@ -314,7 +314,7 @@ def train_model(
                     checkpoint_state(model, optimizer, trained_epoch, accumulated_iter),
                     filename=ckpt_name,
                 )
-            if rank == 0:
+            if rank == 0 and tb_log:
                 evaluate_hook(
                     hook_config,
                     model=model,
