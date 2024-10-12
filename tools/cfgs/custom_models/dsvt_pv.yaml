@@ -1,13 +1,10 @@
-# CUDA_VISIBLE_DEVICES=1,2,3 ./scripts/dist_train.sh 3 --cfg_file ./cfgs/custom_models/dsvt.yaml --work_dir ../work_dir/dsvt_base --sync_bn --hyper hyperparameter
+# CUDA_VISIBLE_DEVICES=1,2,3 ./scripts/dist_train.sh 3 --cfg_file ./cfgs/custom_models/dsvt.yaml --work_dir ../work_dir/dsvt_base --sync_bn --hyper hyperparameter --wandb
 CLASS_NAMES: ['Vehicle', 'Pedestrian', 'Cyclist']
 
 DATA_CONFIG:
     DATASET: 'CustomDataset'
-    DATA_PATH: "/home/ubuntu/eslim/dna/dataset/custom"
-    # DATA_PATH: '../data/custom'
-
-    # POINT_CLOUD_RANGE: [-74.88, -74.88, -2, 74.88, 74.88, 4]
-    POINT_CLOUD_RANGE: [-75.2, -75.2, -2, 75.2, 75.2, 4]
+    DATA_PATH: "/home/ies0411/dna_edge/datasets/custom"
+    POINT_CLOUD_RANGE: [-74.88, -74.88, -2, 74.88, 74.88, 4]
 
     MAP_CLASS_TO_KITTI: {
         'Vehicle': 'Car',
@@ -63,47 +60,47 @@ DATA_CONFIG:
               WORLD_SCALE_RANGE: [0.95, 1.05]
 
 
-    # DATA_PROCESSOR:
-    #     - NAME: mask_points_and_boxes_outside_range
-    #       REMOVE_OUTSIDE_BOXES: True
-
-    #     - NAME: shuffle_points
-    #       SHUFFLE_ENABLED: {
-    #             'train': True,
-    #             'test': False
-    #         }
-    #     - NAME: transform_points_to_voxels_placeholder
-    #       VOXEL_SIZE: [ 0.32, 0.32, 0.1875]
     DATA_PROCESSOR:
         - NAME: mask_points_and_boxes_outside_range
           REMOVE_OUTSIDE_BOXES: True
 
         - NAME: shuffle_points
           SHUFFLE_ENABLED: {
-            'train': True,
-            'test': False
-          }
+                'train': True,
+                'test': False
+            }
+        - NAME: transform_points_to_voxels_placeholder
+          VOXEL_SIZE: [ 0.32, 0.32, 0.1875]
+    # DATA_PROCESSOR:
+    #     - NAME: mask_points_and_boxes_outside_range
+    #       REMOVE_OUTSIDE_BOXES: True
 
-        - NAME: transform_points_to_voxels
-          VOXEL_SIZE: [0.1, 0.1, 0.15]
-          MAX_POINTS_PER_VOXEL: 5
-          MAX_NUMBER_OF_VOXELS: {
-            'train': 150000,
-            'test': 150000
-          }
+    #     - NAME: shuffle_points
+    #       SHUFFLE_ENABLED: {
+    #         'train': True,
+    #         'test': False
+    #       }
+
+    #     - NAME: transform_points_to_voxels
+    #       VOXEL_SIZE: [0.1, 0.1, 0.15]
+    #       MAX_POINTS_PER_VOXEL: 5
+    #       MAX_NUMBER_OF_VOXELS: {
+    #         'train': 150000,
+    #         'test': 150000
+    #       }
 
 
 MODEL:
     NAME: PVRCNNPlusPlus
 
     VFE:
-        # NAME: DynamicVoxelVFE
-        # WITH_DISTANCE: False
-        # USE_ABSLOTE_XYZ: True
-        # USE_NORM: True
-        # NUM_FILTERS: [ 192, 192 ]
+        NAME: DynamicVoxelVFE
+        WITH_DISTANCE: False
+        USE_ABSLOTE_XYZ: True
+        USE_NORM: True
+        NUM_FILTERS: [ 192, 192 ]
 
-        NAME: MeanVFE
+        # NAME: MeanVFE
 
     BACKBONE_3D:
         NAME: DSVT
@@ -115,6 +112,7 @@ MODEL:
             window_shape: [[12, 12, 32], [12, 12, 8], [12, 12, 2], [12, 12, 1]]
             hybrid_factor: [2, 2, 1] # x, y, z
             shifts_list: [[[0, 0, 0], [6, 6, 0]], [[0, 0, 0], [6, 6, 0]], [[0, 0, 0], [6, 6, 0]], [[0, 0, 0], [6, 6, 0]]]
+            # normalize_pos: False
             normalize_pos: True
 
         block_name: ['DSVTBlock','DSVTBlock','DSVTBlock','DSVTBlock']
@@ -130,9 +128,14 @@ MODEL:
         # You can enable torch.utils.checkpoint to save GPU memory
         USE_CHECKPOINT: False
 
+
     MAP_TO_BEV:
-        NAME: HeightCompression
-        NUM_BEV_FEATURES: 256
+        NAME: PointPillarScatter3d
+        INPUT_SHAPE: [468, 468, 1]
+        NUM_BEV_FEATURES: 192
+
+        # NAME: HeightCompression
+        # NUM_BEV_FEATURES: 256
 
     # BACKBONE_2D:
     #     NAME: BaseBEVResBackbone
@@ -144,11 +147,12 @@ MODEL:
 
     BACKBONE_2D:
         NAME: BaseBEVResBackbone
-        LAYER_NUMS: [ 1, 2, 2 ]
+        LAYER_NUMS: [ 1, 2, 4 ]
         LAYER_STRIDES: [ 1, 2, 2 ]
         NUM_FILTERS: [ 128, 128, 256 ]
         UPSAMPLE_STRIDES: [ 1, 2, 4 ]
         NUM_UPSAMPLE_FILTERS: [ 128, 128, 128 ]
+
 
     DENSE_HEAD:
         NAME: AnchorHeadSingle
@@ -211,14 +215,14 @@ MODEL:
     PFE:
         NAME: VoxelSetAbstraction
         POINT_SOURCE: raw_points
-        NUM_KEYPOINTS: 2048
+        NUM_KEYPOINTS: 4096
         NUM_OUTPUT_FEATURES: 90
         SAMPLE_METHOD: SPC
         SPC_SAMPLING:
             NUM_SECTORS: 6
             SAMPLE_RADIUS_WITH_ROI: 1.6
 
-        FEATURES_SOURCE: ['bev', 'x_conv3', 'x_conv4', 'raw_points']
+        FEATURES_SOURCE: ['raw_points']
         SA_LAYER:
             raw_points:
                 NAME: VectorPoolAggregationModuleMSG
@@ -240,54 +244,6 @@ MODEL:
                     MAX_NEIGHBOR_DISTANCE: 0.4
                     NEIGHBOR_NSAMPLE: -1
                     POST_MLPS: [ 32, 32 ]
-
-            x_conv3:
-                DOWNSAMPLE_FACTOR: 4
-                INPUT_CHANNELS: 64
-
-                NAME: VectorPoolAggregationModuleMSG
-                NUM_GROUPS: 2
-                LOCAL_AGGREGATION_TYPE: local_interpolation
-                NUM_REDUCED_CHANNELS: 32
-                NUM_CHANNELS_OF_LOCAL_AGGREGATION: 32
-                MSG_POST_MLPS: [128]
-                FILTER_NEIGHBOR_WITH_ROI: True
-                RADIUS_OF_NEIGHBOR_WITH_ROI: 4.0
-
-                GROUP_CFG_0:
-                    NUM_LOCAL_VOXEL: [3, 3, 3]
-                    MAX_NEIGHBOR_DISTANCE: 1.2
-                    NEIGHBOR_NSAMPLE: -1
-                    POST_MLPS: [64, 64]
-                GROUP_CFG_1:
-                    NUM_LOCAL_VOXEL: [ 3, 3, 3 ]
-                    MAX_NEIGHBOR_DISTANCE: 2.4
-                    NEIGHBOR_NSAMPLE: -1
-                    POST_MLPS: [ 64, 64 ]
-
-            x_conv4:
-                DOWNSAMPLE_FACTOR: 8
-                INPUT_CHANNELS: 64
-
-                NAME: VectorPoolAggregationModuleMSG
-                NUM_GROUPS: 2
-                LOCAL_AGGREGATION_TYPE: local_interpolation
-                NUM_REDUCED_CHANNELS: 32
-                NUM_CHANNELS_OF_LOCAL_AGGREGATION: 32
-                MSG_POST_MLPS: [ 128 ]
-                FILTER_NEIGHBOR_WITH_ROI: True
-                RADIUS_OF_NEIGHBOR_WITH_ROI: 6.4
-
-                GROUP_CFG_0:
-                    NUM_LOCAL_VOXEL: [ 3, 3, 3 ]
-                    MAX_NEIGHBOR_DISTANCE: 2.4
-                    NEIGHBOR_NSAMPLE: -1
-                    POST_MLPS: [ 64, 64 ]
-                GROUP_CFG_1:
-                    NUM_LOCAL_VOXEL: [ 3, 3, 3 ]
-                    MAX_NEIGHBOR_DISTANCE: 4.8
-                    NEIGHBOR_NSAMPLE: -1
-                    POST_MLPS: [ 64, 64 ]
 
 
     POINT_HEAD:

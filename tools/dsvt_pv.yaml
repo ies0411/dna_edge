@@ -1,11 +1,11 @@
 project: DNA_edge
-name: DSVT_anchor_base
-architecture: DSVT_anchor_base
+name: DSVT_pv_rawpoints
+architecture: DSVT_pv_rawpoints
 dataset: base
 LR: 0.003
 WEIGHT_DECAY: 0.05
 MOMENTUM: 0.9
-NUM_EPOCHS: 30
+NUM_EPOCHS: 24
 BATCH_SIZE_PER_GPU: 4
 dropout: 0.0
 normalize_pos: True
