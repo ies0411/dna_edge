@@ -1,11 +1,11 @@
 project: DNA_edge
-name: DSVT_base_2
-architecture: DSVT_VOXEL_2
-dataset: base
-LR: 0.0007
+name: DSVT_base_deep_2
+architecture: DSVT_VOXEL_deep_2
+dataset: mix
+LR: 0.0008
 WEIGHT_DECAY: 0.05
 MOMENTUM: 0.9
-NUM_EPOCHS: 20
+NUM_EPOCHS: 24
 BATCH_SIZE_PER_GPU: 2
 dropout: 0.0
 normalize_pos: True

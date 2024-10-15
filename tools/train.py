@@ -200,6 +200,30 @@ def set_wandb(args):
                 "dropout": hyper_param["dropout"],
             },
         )
+    elif args.hyper == "dsvt_deep":
+        hyper_param = load_yaml(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), f"{args.hyper}.yaml")
+        )
+        wandb.init(
+            project=hyper_param["project"],
+            name=hyper_param["name"],
+            config={
+                "LR": hyper_param["LR"],
+                "WEIGHT_DECAY": hyper_param["WEIGHT_DECAY"],
+                "MOMENTUM": hyper_param["MOMENTUM"],
+
+                "BATCH_SIZE_PER_GPU": hyper_param["BATCH_SIZE_PER_GPU"],
+
+                "VOXEL_SIZE": hyper_param["VOXEL_SIZE"],
+                "NUM_EPOCHS": hyper_param["NUM_EPOCHS"],
+                "architecture": hyper_param["architecture"],
+                "dataset": hyper_param["dataset"],
+                "POINT_CLOUD_RANGE": hyper_param["POINT_CLOUD_RANGE"],
+                "WARMUP": hyper_param["WARMUP"],
+                "normalize_pos": hyper_param["normalize_pos"],
+                "dropout": hyper_param["dropout"],
+            },
+        )
     elif args.hyper == "pv":
         hyper_param = load_yaml(
             os.path.join(os.path.dirname(os.path.abspath(__file__)), f"{args.hyper}.yaml")

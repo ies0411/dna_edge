@@ -41,6 +41,8 @@ class CustomDataset(DatasetTemplate):
         self.custom_infos = []
         self.include_data(self.mode)
         self.map_class_to_kitti = self.dataset_cfg.MAP_CLASS_TO_KITTI
+        if self.training and self.dataset_cfg.get('BALANCED_RESAMPLING', False):
+            self.custom_infos = self.balanced_infos_resampling(self.custom_infos)
 
     def include_data(self, mode):
         self.logger.info("Loading Custom dataset.")
@@ -56,6 +58,44 @@ class CustomDataset(DatasetTemplate):
 
         self.custom_infos.extend(custom_infos)
         self.logger.info("Total samples for CUSTOM dataset: %d" % (len(custom_infos)))
+
+    def balanced_infos_resampling(self, infos):
+        """
+        Class-balanced sampling of nuScenes dataset from https://arxiv.org/abs/1908.09492
+        """
+        if self.class_names is None:
+            return infos
+
+        cls_infos = {name: [] for name in self.class_names}
+        for info in infos:
+            for name in set(info["name"]):
+                if name in self.class_names:
+                    cls_infos[name].append(info)
+
+        duplicated_samples = sum([len(v) for _, v in cls_infos.items()])
+        cls_dist = {k: len(v) / duplicated_samples for k, v in cls_infos.items()}
+
+        sampled_infos = []
+
+        frac = 1.0 / len(self.class_names)
+        ratios = [frac / v for v in cls_dist.values()]
+
+        for cur_cls_infos, ratio in zip(list(cls_infos.values()), ratios):
+            sampled_infos += np.random.choice(
+                cur_cls_infos, int(len(cur_cls_infos) * ratio)
+            ).tolist()
+        self.logger.info('Total samples after balanced resampling: %s' % (len(sampled_infos)))
+
+        cls_infos_new = {name: [] for name in self.class_names}
+        for info in sampled_infos:
+            for name in set(info["name"]):
+                if name in self.class_names:
+                    cls_infos_new[name].append(info)
+
+        cls_dist_new = {k: len(v) / len(sampled_infos) for k, v in cls_infos_new.items()}
+
+        return sampled_infos
+
 
     def get_label(self, idx):
         label_file = self.root_path / "labels" / ("%s.txt" % idx)
@@ -126,7 +166,7 @@ class CustomDataset(DatasetTemplate):
         # return data_dict
         if len(self.dataset_cfg.DATA_AUGMENTOR.MIX.NAME_LIST) == 0 or np.random.random(
             1
-        ) > self.dataset_cfg.DATA_AUGMENTOR.MIX.get("PROB", 0):
+        ) > self.dataset_cfg.DATA_AUGMENTOR.MIX.get("PROB", 0) or self.training is not True:
             info = copy.deepcopy(self.custom_infos[index])
             sample_idx = info["point_cloud"]["lidar_idx"]
             points = self.get_lidar(sample_idx)

@@ -32,10 +32,10 @@ DATA_CONFIG:
     DATA_AUGMENTOR:
         DISABLE_AUG_LIST: ['placeholder']
         MIX:
-            NAME_LIST: []
+            NAME_LIST: ["mix_up", "cut_mix"]
             COLLISION_DETECTION: True
             ALPHA: 2
-            PROB: 0.2
+            PROB: 0.1
         AUG_CONFIG_LIST:
             - NAME: gt_sampling
               USE_ROAD_PLANE: False
@@ -99,7 +99,7 @@ MODEL:
         block_name: ['DSVTBlock','DSVTBlock','DSVTBlock','DSVTBlock']
         set_info: [[48, 1], [48, 1], [48, 1], [48, 1]]
         d_model: [192, 192, 192, 192]
-        nhead: [8, 8, 8, 8]
+        nhead: [12, 12, 12, 12]
         dim_feedforward: [384, 384, 384, 384]
         dropout: 0.0
         activation: gelu
@@ -129,7 +129,7 @@ MODEL:
             ['Vehicle', 'Pedestrian', 'Cyclist']
         ]
 
-        SHARED_CONV_CHANNEL: 128
+        SHARED_CONV_CHANNEL: 256
         USE_BIAS_BEFORE_NORM: False
         NUM_HM_CONV: 2
 
@@ -197,18 +197,18 @@ MODEL:
 
 OPTIMIZATION:
     BATCH_SIZE_PER_GPU: 2
-    NUM_EPOCHS: 20
+    NUM_EPOCHS: 24
 
     OPTIMIZER: adam_onecycle
-    LR: 0.0007
+    LR: 0.0008
     WEIGHT_DECAY: 0.05
     MOMENTUM: 0.9
 
     MOMS: [0.95, 0.85]
-    PCT_START: 0.1
+    PCT_START: 0.01
     DIV_FACTOR: 100
-    DECAY_STEP_LIST: [5, 10]
-    LR_DECAY: 0.1
+    DECAY_STEP_LIST: [5, 10,15,20]
+    LR_DECAY: 0.01
     LR_CLIP: 0.0000001
 
     LR_WARMUP: False
@@ -220,7 +220,7 @@ OPTIMIZATION:
 HOOK:
     DisableAugmentationHook:
         DISABLE_AUG_LIST: ['gt_sampling','random_world_flip','random_world_rotation','random_world_scaling', 'random_world_translation']
-        NUM_LAST_EPOCHS: 3
+        NUM_LAST_EPOCHS: 1
 
     EvalutationHook:
         Interval: 1
