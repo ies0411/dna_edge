@@ -3,7 +3,7 @@ from functools import partial
 import numpy as np
 from PIL import Image
 
-from ...utils import common_utils
+from ...utils import common_utils,downsample_utils
 from . import augmentor_utils, database_sampler
 
 
@@ -35,7 +35,7 @@ class DataAugmentor(object):
                     continue
             cur_augmentor = getattr(self, cur_cfg.NAME)(config=cur_cfg)
             self.data_augmentor_queue.append(cur_augmentor)
-             
+
     def gt_sampling(self, config=None):
         db_sampler = database_sampler.DataBaseSampler(
             root_path=self.root_path,
@@ -52,6 +52,69 @@ class DataAugmentor(object):
 
     def __setstate__(self, d):
         self.__dict__.update(d)
+
+    def get_polar_image(self, points):
+        theta, phi = downsample_utils.compute_angles(points[:, :3])
+        r = np.sqrt(np.sum(points[:, :3] ** 2, axis=1))
+        polar_image = points.copy()
+        polar_image[:, 0] = phi
+        polar_image[:, 1] = theta
+        polar_image[:, 2] = r
+        return polar_image
+
+
+    def label_point_cloud_beam(self, polar_image, points, beam=32):
+        if polar_image.shape[0] <= beam:
+            print("too small point cloud!")
+            return np.arange(polar_image.shape[0])
+        import time
+
+        # start_time = time.time()
+        beam_label, centroids = downsample_utils.beam_label(polar_image[:, 1], beam)
+        # print(f'beam label : {time.time()-start_time}')
+        idx = np.argsort(centroids)
+        rev_idx = np.zeros_like(idx)
+        for i, t in enumerate(idx):
+            rev_idx[t] = i
+        beam_label = rev_idx[beam_label]
+        return beam_label
+
+    def random_beam_upsample(self, data_dict=None, config=None):
+        if data_dict is None:
+            return partial(self.random_beam_upsample, config=config)
+
+        enable = np.random.choice([False, True], replace=False, p=[0.5, 0.5])
+        if not enable:
+            return data_dict
+        points = data_dict['points']
+        polar_image = self.get_polar_image(points)
+        beam_label = self.label_point_cloud_beam(polar_image, points, config['BEAM'])
+        new_pcs = [points]
+        phi = polar_image[:, 0]
+        for i in range(config['BEAM'] - 1):
+            if np.random.rand() < config['BEAM_PROB'][i]:
+                cur_beam_mask = beam_label == i
+                next_beam_mask = beam_label == i + 1
+                delta_phi = np.abs(
+                    phi[cur_beam_mask, np.newaxis] - phi[np.newaxis, next_beam_mask]
+                )
+                corr_idx = np.argmin(delta_phi, 1)
+                min_delta = np.min(delta_phi, 1)
+                mask = min_delta < config['PHI_THRESHOLD']
+                cur_beam = polar_image[cur_beam_mask][mask]
+                next_beam = polar_image[next_beam_mask][corr_idx[mask]]
+                new_beam = (cur_beam + next_beam) / 2
+                new_pc = new_beam.copy()
+                new_pc[:, 0] = (
+                    np.cos(new_beam[:, 1]) * np.cos(new_beam[:, 0]) * new_beam[:, 2]
+                )
+                new_pc[:, 1] = (
+                    np.cos(new_beam[:, 1]) * np.sin(new_beam[:, 0]) * new_beam[:, 2]
+                )
+                new_pc[:, 2] = np.sin(new_beam[:, 1]) * new_beam[:, 2]
+                new_pcs.append(new_pc)
+        data_dict['points'] = np.concatenate(new_pcs, 0)
+        return data_dict
 
     def random_world_flip(self, data_dict=None, config=None):
         if data_dict is None:
@@ -97,7 +160,7 @@ class DataAugmentor(object):
     def random_world_scaling(self, data_dict=None, config=None):
         if data_dict is None:
             return partial(self.random_world_scaling, config=config)
-        
+
         if 'roi_boxes' in data_dict.keys():
             gt_boxes, roi_boxes, points, noise_scale = augmentor_utils.global_scaling_with_roi_boxes(
                 data_dict['gt_boxes'], data_dict['roi_boxes'], data_dict['points'], config['WORLD_SCALE_RANGE'], return_scale=True
@@ -146,10 +209,10 @@ class DataAugmentor(object):
         gt_boxes, points = data_dict['gt_boxes'], data_dict['points']
         points[:, :3] += noise_translate
         gt_boxes[:, :3] += noise_translate
-                
+
         if 'roi_boxes' in data_dict.keys():
             data_dict['roi_boxes'][:, :3] += noise_translate
-        
+
         data_dict['gt_boxes'] = gt_boxes
         data_dict['points'] = points
         data_dict['noise_translate'] = noise_translate

@@ -7,6 +7,7 @@ import numpy as np
 from ...ops.roiaware_pool3d import roiaware_pool3d_utils
 from ...utils import box_utils, common_utils
 from ..dataset import DatasetTemplate
+import torch
 # from .eval_utils import get_custom_eval_result
 
 
@@ -137,6 +138,9 @@ class CustomDataset(DatasetTemplate):
             if split_dir.exists()
             else None
         )
+        self.sample_id_list = [
+            sample_id for sample_id in self.sample_id_list if sample_id.strip()
+        ]
 
     def __len__(self):
         if self._merge_all_iters_to_one_epoch:
@@ -178,7 +182,7 @@ class CustomDataset(DatasetTemplate):
             if "annos" in info:
                 # TODO : mapping cls to kitti
                 annos = info["annos"]
-                annos = common_utils.drop_info_with_name(annos, name="DontCare")
+                # annos = common_utils.drop_info_with_name(annos, name="DontCare")
                 # for k in range(annos["name"].shape[0]):
                 #     annos["name"][k] = (
                 #         self.dataset_cfg.MAP_NIA_TO_CLASS[annos["name"][k]]
@@ -211,7 +215,7 @@ class CustomDataset(DatasetTemplate):
             if "annos" in info_1:
                 # TODO : mapping cls to kitti
                 annos = info_1["annos"]
-                annos = common_utils.drop_info_with_name(annos, name="DontCare")
+                # annos = common_utils.drop_info_with_name(annos, name="DontCare")
                 # for k in range(annos["name"].shape[0]):
                 #     annos["name"][k] = (
                 #         self.dataset_cfg.MAP_NIA_TO_CLASS[annos["name"][k]]
@@ -225,7 +229,7 @@ class CustomDataset(DatasetTemplate):
             if "annos" in info_2:
                 # TODO : mapping cls to kitti
                 annos = info_2["annos"]
-                annos = common_utils.drop_info_with_name(annos, name="DontCare")
+                # annos = common_utils.drop_info_with_name(annos, name="DontCare")
                 # for k in range(annos["name"].shape[0]):
                 #     annos["name"][k] = (
                 #         self.dataset_cfg.MAP_NIA_TO_CLASS[annos["name"][k]]
@@ -261,7 +265,13 @@ class CustomDataset(DatasetTemplate):
         def kitti_eval(eval_det_annos, eval_gt_annos, map_name_to_kitti):
             from ..kitti.kitti_object_eval_python import eval as kitti_eval
             from ..kitti import kitti_utils
-
+            map_name_to_kitti = {
+                "Vehicle": "Car",
+                "Pedestrian": "Pedestrian",
+                "Cyclist": "Cyclist",
+                "Sign": "Sign",
+                "Car": "Car",
+            }
             kitti_utils.transform_annotations_to_kitti_format(
                 eval_det_annos, map_name_to_kitti=map_name_to_kitti
             )
@@ -280,6 +290,25 @@ class CustomDataset(DatasetTemplate):
 
             return ap_result_str, ap_dict
 
+        def waymo_eval(eval_det_annos, eval_gt_annos):
+            from ..waymo.waymo_eval import OpenPCDetWaymoDetectionMetricsEstimator
+
+            eval = OpenPCDetWaymoDetectionMetricsEstimator()
+
+            ap_dict = eval.waymo_evaluation(
+                eval_det_annos,
+                eval_gt_annos,
+                class_name=class_names,
+                distance_thresh=1000,
+                fake_gt_infos=self.dataset_cfg.get("INFO_WITH_FAKELIDAR", False),
+            )
+            ap_result_str = "\n"
+            for key in ap_dict:
+                ap_dict[key] = ap_dict[key][0]
+                ap_result_str += "%s: %.4f \n" % (key, ap_dict[key])
+
+            return ap_result_str, ap_dict
+
         eval_det_annos = copy.deepcopy(det_annos)
         eval_gt_annos = [copy.deepcopy(info["annos"]) for info in self.custom_infos]
 
@@ -287,6 +316,9 @@ class CustomDataset(DatasetTemplate):
             ap_result_str, ap_dict = kitti_eval(
                 eval_det_annos, eval_gt_annos, self.map_class_to_kitti
             )
+        elif kwargs["eval_metric"] == "waymo":
+            ap_result_str, ap_dict = waymo_eval(eval_det_annos, eval_gt_annos)
+
         else:
             raise NotImplementedError
 
@@ -307,13 +339,29 @@ class CustomDataset(DatasetTemplate):
             info = {}
             pc_info = {"num_features": num_features, "lidar_idx": sample_idx}
             info["point_cloud"] = pc_info
+            points = self.get_lidar(sample_idx)
 
             if has_label:
                 annotations = {}
                 gt_boxes_lidar, name = self.get_label(sample_idx)
                 annotations["name"] = name
                 annotations["gt_boxes_lidar"] = gt_boxes_lidar[:, :7]
+                num_pts_in_gt = (
+                    roiaware_pool3d_utils.points_in_boxes_cpu(
+                        torch.from_numpy(points[:, 0:3]),
+                        torch.from_numpy(gt_boxes_lidar[:, :7]),
+                    )
+                    .sum(dim=1)
+                    .float()
+                    .cpu()
+                    .numpy()
+                )
+                print(f'num_points_in_gt : {num_pts_in_gt}')
+                annotations["num_points_in_gt"] = num_pts_in_gt.astype(np.int64)
+                annotations["difficulty"] = np.array([0] * gt_boxes_lidar.shape[0])
                 info["annos"] = annotations
+
+                # info["annos"] = annotations
 
             return info
 
@@ -478,4 +526,5 @@ if __name__ == "__main__":
 
 
 # python -m pcdet.datasets.custom.custom_dataset create_custom_infos tools/cfgs/dataset_configs/custom_dataset.yaml /mnt/nas3/Data/dna_autonomous/vehicle_ego/custom
-# python -m pcdet.datasets.custom.custom_dataset create_custom_infos tools/cfgs/dataset_configs/custom_dataset.yaml /mnt/nas3/Data/dna_autonomous/edge_ego/custom
+# python -m pcdet.datasets.custom.custom_dataset create_custom_infos tools/cfgs/dataset_configs/custom_dataset.yaml /mnt/nas-1/eslim/Data/dna/edge/custom
+# /mnt/nas3/Data/dna_autonomous/edge_ego/custom

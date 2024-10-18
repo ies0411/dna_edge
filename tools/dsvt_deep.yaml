@@ -1,8 +1,8 @@
 project: DNA_edge
-name: DSVT_base_deep_2
-architecture: DSVT_VOXEL_deep_2
+name: DSVT_base_deep_upsampling
+architecture: DSVT_VOXEL_deep_upsampling
 dataset: mix
-LR: 0.0008
+LR: 0.0005
 WEIGHT_DECAY: 0.05
 MOMENTUM: 0.9
 NUM_EPOCHS: 24
@@ -11,7 +11,7 @@ dropout: 0.0
 normalize_pos: True
 VOXEL_SIZE: [ 0.32, 0.32, 0.1875]
 POINT_CLOUD_RANGE: [-74.88, -74.88, -2, 74.88, 74.88, 4]
-WARMUP: 0
+WARMUP: 1
 
 # SCORE_THRESH: 0.1
 # NMS_SCORE_THRESH: 0.1

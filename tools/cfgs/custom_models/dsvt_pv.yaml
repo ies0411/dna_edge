@@ -31,11 +31,16 @@ DATA_CONFIG:
     DATA_AUGMENTOR:
         DISABLE_AUG_LIST: ['placeholder']
         MIX:
-            NAME_LIST: []
+            NAME_LIST: ["mix_up", "cut_mix"]
             COLLISION_DETECTION: True
             ALPHA: 2
-            PROB: 0.2
+            PROB: 0.1
         AUG_CONFIG_LIST:
+            - NAME: random_beam_upsample
+              BEAM: 32
+              BEAM_PROB: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+              PHI_THRESHOLD: 0.03
+
             - NAME: gt_sampling
               USE_ROAD_PLANE: False
               DB_INFO_PATH:
@@ -330,31 +335,31 @@ MODEL:
                 'code_weights': [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
             }
 
+    # POST_PROCESSING:
+    #     RECALL_THRESH_LIST: [0.3, 0.5, 0.7]
+    #     SCORE_THRESH: 0.1
+    #     OUTPUT_RAW_SCORE: False
+
+    #     EVAL_METRIC: kitti
+
+    #     NMS_CONFIG:
+    #         MULTI_CLASSES_NMS: False
+    #         NMS_TYPE: nms_gpu
+    #         NMS_THRESH: 0.1
+    #         NMS_PRE_MAXSIZE: 4096
+    #         NMS_POST_MAXSIZE: 500
+
     POST_PROCESSING:
         RECALL_THRESH_LIST: [0.3, 0.5, 0.7]
-        SCORE_THRESH: 0.1
-        OUTPUT_RAW_SCORE: False
 
+        SCORE_THRESH: 0.01
+        OUTPUT_RAW_SCORE: False
         EVAL_METRIC: kitti
 
         NMS_CONFIG:
             MULTI_CLASSES_NMS: False
             NMS_TYPE: nms_gpu
-            NMS_THRESH: 0.1
-            NMS_PRE_MAXSIZE: 4096
-            NMS_POST_MAXSIZE: 500
-
-    POST_PROCESSING:
-        RECALL_THRESH_LIST: [0.3, 0.5, 0.7]
-
-        SCORE_THRESH: 0.1
-        OUTPUT_RAW_SCORE: False
-        EVAL_METRIC: kitti
-
-        NMS_CONFIG:
-            MULTI_CLASSES_NMS: False
-            NMS_TYPE: nms_gpu
-            NMS_THRESH: 0.1
+            NMS_THRESH: 0.7
             NMS_PRE_MAXSIZE: 4096
             NMS_POST_MAXSIZE: 500
 
@@ -364,7 +369,7 @@ OPTIMIZATION:
     NUM_EPOCHS: 15
 
     OPTIMIZER: adam_onecycle
-    LR: 0.001
+    LR: 0.0008
     WEIGHT_DECAY: 0.05
     MOMENTUM: 0.9
 
@@ -375,7 +380,7 @@ OPTIMIZATION:
     LR_DECAY: 0.1
     LR_CLIP: 0.0000001
 
-    LR_WARMUP: False
+    LR_WARMUP: True
     WARMUP_EPOCH: 1
 
     GRAD_NORM_CLIP: 10
