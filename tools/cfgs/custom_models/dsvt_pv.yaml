@@ -393,3 +393,7 @@ HOOK:
 
     EvalutationHook:
         Interval: 1
+
+
+
+# CUDA_VISIBLE_DEVICES=0,1 ./scripts/dist_train.sh 2 --cfg_file ./cfgs/custom_models/dsvt_pv.yaml --work_dir /mnt/nas-1/eslim/workspace/dna_edge/dsvt_pv_upsample --sync_bn --wandb --hyper dsvt_pv --pretrained_mode /mnt/nas-1/eslim/workspace/dna_edge/dsvt_pv/ckpt/checkpoint_epoch_24.pth
