@@ -8,6 +8,6 @@ __pycache__/
 wandb/
 */.ipynb_checkpoints/*
 .ipynb_checkpoints/
-dataset/
+datasets/
 output/
 work_dir/
