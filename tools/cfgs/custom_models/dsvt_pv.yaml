@@ -27,7 +27,7 @@ DATA_CONFIG:
         used_feature_list: ['x', 'y', 'z', 'intensity'],
         src_feature_list: ['x', 'y', 'z', 'intensity'],
     }
-
+    BALANCED_RESAMPLING: True
     DATA_AUGMENTOR:
         DISABLE_AUG_LIST: ['placeholder']
         MIX:

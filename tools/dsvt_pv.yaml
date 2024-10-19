@@ -1,7 +1,7 @@
 project: DNA_edge
-name: DSVT_pv_rawpoints_upsample
-architecture: DSVT_pv_rawpoints_upsample
-dataset: mix
+name: DSVT_pv_rawpoints_upsample_bal
+architecture: DSVT_pv_rawpoints_upsample_bal
+dataset: mix_bal
 LR: 0.0008
 WEIGHT_DECAY: 0.05
 MOMENTUM: 0.9

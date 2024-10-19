@@ -1,0 +1,16 @@
+project: DNA_edge
+architecture: PVRCNN_PLUS_up_bal
+name: PVRCNN_base_up_bal
+dataset: base
+LR: 0.0005
+WEIGHT_DECAY: 0.001
+MOMENTUM: 0.9
+NUM_EPOCHS: 45
+BATCH_SIZE_PER_GPU: 4
+# dropout: 0.0
+# normalize_pos: True
+VOXEL_SIZE: [0.1, 0.1, 0.15]
+POINT_CLOUD_RANGE: [-75.2, -75.2, -2, 75.2, 75.2, 4]
+WARMUP: 2
+# SCORE_THRESH: 0.1
+# NMS_SCORE_THRESH: 0.1

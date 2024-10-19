@@ -69,7 +69,8 @@ class CustomDataset(DatasetTemplate):
 
         cls_infos = {name: [] for name in self.class_names}
         for info in infos:
-            for name in set(info["name"]):
+            annos = info["annos"]
+            for name in set(annos["name"]):
                 if name in self.class_names:
                     cls_infos[name].append(info)
 
@@ -85,15 +86,20 @@ class CustomDataset(DatasetTemplate):
             sampled_infos += np.random.choice(
                 cur_cls_infos, int(len(cur_cls_infos) * ratio)
             ).tolist()
-        self.logger.info('Total samples after balanced resampling: %s' % (len(sampled_infos)))
+        self.logger.info(
+            "Total samples after balanced resampling: %s" % (len(sampled_infos))
+        )
 
         cls_infos_new = {name: [] for name in self.class_names}
         for info in sampled_infos:
-            for name in set(info["name"]):
+            annos = info["annos"]
+            for name in set(annos["name"]):
                 if name in self.class_names:
                     cls_infos_new[name].append(info)
 
-        cls_dist_new = {k: len(v) / len(sampled_infos) for k, v in cls_infos_new.items()}
+        cls_dist_new = {
+            k: len(v) / len(sampled_infos) for k, v in cls_infos_new.items()
+        }
 
         return sampled_infos
 
@@ -174,10 +180,12 @@ class CustomDataset(DatasetTemplate):
             info = copy.deepcopy(self.custom_infos[index])
             sample_idx = info["point_cloud"]["lidar_idx"]
             points = self.get_lidar(sample_idx)
-            input_dict = {
-                "frame_id": self.sample_id_list[index],
-                "points": points,
-            }
+            # input_dict = {
+            #     "frame_id": self.sample_id_list[index],
+            #     "points": points,
+            # }
+            input_dict = {"frame_id": sample_idx, "points": points}
+
 
             if "annos" in info:
                 # TODO : mapping cls to kitti
@@ -203,13 +211,21 @@ class CustomDataset(DatasetTemplate):
             points_1 = self.get_lidar(info_1["point_cloud"]["lidar_idx"])
             points_2 = self.get_lidar(info_2["point_cloud"]["lidar_idx"])
 
+            # input_dict_1 = {
+            #     "frame_id": self.sample_id_list[index],
+            #     "points": points_1,
+            # }
+            # input_dict_2 = {
+            #     "frame_id": self.sample_id_list[idx2],
+            #     "points": points_2,
+            # }
             input_dict_1 = {
-                "frame_id": self.sample_id_list[index],
-                "points": points_1,
+                'frame_id': info_1["point_cloud"]["lidar_idx"],
+                'points': points_1,
             }
             input_dict_2 = {
-                "frame_id": self.sample_id_list[idx2],
-                "points": points_2,
+                'frame_id': info_2["point_cloud"]["lidar_idx"],
+                'points': points_2,
             }
 
             if "annos" in info_1:
@@ -356,7 +372,7 @@ class CustomDataset(DatasetTemplate):
                     .cpu()
                     .numpy()
                 )
-                print(f'num_points_in_gt : {num_pts_in_gt}')
+                # print(f'num_points_in_gt : {num_pts_in_gt}')
                 annotations["num_points_in_gt"] = num_pts_in_gt.astype(np.int64)
                 annotations["difficulty"] = np.array([0] * gt_boxes_lidar.shape[0])
                 info["annos"] = annotations
@@ -527,4 +543,3 @@ if __name__ == "__main__":
 
 # python -m pcdet.datasets.custom.custom_dataset create_custom_infos tools/cfgs/dataset_configs/custom_dataset.yaml /mnt/nas3/Data/dna_autonomous/vehicle_ego/custom
 # python -m pcdet.datasets.custom.custom_dataset create_custom_infos tools/cfgs/dataset_configs/custom_dataset.yaml /mnt/nas-1/eslim/Data/dna/edge/custom
-# /mnt/nas3/Data/dna_autonomous/edge_ego/custom

@@ -1,17 +1,17 @@
 project: DNA_edge
-name: DSVT_base_2
-architecture: DSVT_VOXEL_2
-dataset: base
-LR: 0.0007
+name: DSVT_base_up_bal
+architecture: DSVT_VOXEL_up_bal
+dataset: mix_bal
+LR: 0.0008
 WEIGHT_DECAY: 0.05
 MOMENTUM: 0.9
-NUM_EPOCHS: 20
+NUM_EPOCHS: 24
 BATCH_SIZE_PER_GPU: 2
 dropout: 0.0
 normalize_pos: True
 VOXEL_SIZE: [ 0.32, 0.32, 0.1875]
 POINT_CLOUD_RANGE: [-74.88, -74.88, -2, 74.88, 74.88, 4]
-WARMUP: 0
+WARMUP: 1
 
 # SCORE_THRESH: 0.1
 # NMS_SCORE_THRESH: 0.1
